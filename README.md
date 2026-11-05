@@ -1,3 +1,63 @@
+# Custa sales workspace
+
+Custa adds a LinkedIn sales workflow to the Next.js app in this T3 Turbo
+monorepo. Next.js and React render the workspace with Tailwind and the shared
+UI package. Better Auth identifies the business owner, tRPC exposes typed
+procedures, and Drizzle persists profiles, leads, and orders in Postgres.
+The existing TanStack Start and Expo apps are also part of the workspace.
+
+## Run Custa
+
+1. Use the Node and pnpm versions in the root package manifest and run `pnpm install`.
+2. Copy `.env.example` to `.env` and supply your Postgres URL and Better Auth
+   Discord credentials. Configure the Discord callback for the Next.js host
+   (`http://localhost:3000/api/auth/callback/discord` for local development).
+3. Run `pnpm db:push` against your development database.
+4. Run `pnpm dev:next` and open the URL printed by Next.js.
+
+Each signed-in owner has one business profile. Save the business details,
+generate a pitch, and search LinkedIn. Review and edit each outreach message
+before sending. The app adds a private, single-use order submission link.
+The buyer submits their contact and order details without signing in. Custa
+stores the request before attempting email notification and lets the owner
+retry a pending notification from the workspace. Requests are recorded for
+business fulfillment.
+
+## Sales MCP provider
+
+Configure `SALES_MCP_URL` as the trusted provider's Streamable HTTP endpoint,
+`SALES_MCP_TOKEN` as its service bearer token, and `SALES_PUBLIC_URL` as the
+customer-reachable origin of the deployed Next.js app. Use HTTPS for deployed
+endpoints. The profile and workspace can be used before the provider is set up.
+
+The provider is an external service that must expose these tools using the
+2025-11-25 MCP handshake or a supported earlier Streamable HTTP version.
+Return each output as MCP `structuredContent` or as JSON in the first text
+content item. The `business` argument contains `name`, `offering`, `audience`,
+`market`, and `terms`.
+
+| Tool | Arguments | Output |
+| --- | --- | --- |
+| `create_sales_pitch` | `ownerId`, `business` | `{ pitch }` |
+| `research_linkedin_market` | `ownerId`, `business`, `limit` | `{ research, leads: [{ name, company, rationale, profileUrl }] }` |
+| `send_linkedin_outreach` | `ownerId`, `idempotencyKey`, `profileUrl`, `message` | `{ accepted: true }` |
+| `send_order_email` | `ownerId`, `idempotencyKey`, `to`, `order: { id, name, email, details }` | `{ accepted: true }` |
+
+Research should return actual LinkedIn member URLs under
+`https://www.linkedin.com/in/` and up to the requested number of leads.
+The provider must bind `ownerId` to that owner's authorized LinkedIn account
+and enforce account isolation. Use an authorized LinkedIn data and messaging
+integration. LinkedIn's self-service permissions do not grant prospect search
+or direct messaging access. See [LinkedIn API permissions](https://learn.microsoft.com/en-us/linkedin/shared/authentication/getting-access).
+
+For outreach and email, the provider must deduplicate by owner, tool, and
+idempotency key, including concurrent requests. Repeat calls for an already
+accepted action must return the original acceptance. The email provider should
+send the persisted order details to the business inbox using its configured
+sender. Provider acceptance is the status shown in the workspace.
+
+---
+
 # create-t3-turbo
 
 > [!NOTE]

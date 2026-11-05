@@ -51,6 +51,9 @@
     "AUTH_DISCORD_SECRET",
     "AUTH_REDIRECT_PROXY_URL",
     "AUTH_SECRET",
+    "SALES_MCP_URL",
+    "SALES_MCP_TOKEN",
+    "SALES_PUBLIC_URL",
     "PORT"
   ],
   "globalPassThroughEnv": [
