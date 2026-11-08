@@ -4,7 +4,8 @@ WORKDIR /workspace
 RUN npm install --global pnpm@10.19.0
 
 COPY . .
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=custa-pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --store-dir /pnpm/store
 RUN CI=1 NEXT_TELEMETRY_DISABLED=1 pnpm --filter @acme/nextjs build
 RUN chown -R node:node apps/nextjs/.next
 

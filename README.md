@@ -10,18 +10,42 @@ The existing TanStack Start and Expo apps are also part of the workspace.
 
 ### With Docker Compose
 
-Copy `.env.example` to `.env`, set a generated `AUTH_SECRET` and your
-Discord OAuth credentials, and register
-`http://localhost:3000/api/auth/callback/discord` as the Discord callback.
+Copy `.env.example` to `.env` and set a generated `AUTH_SECRET`.
+Set `PROJECT_PRODUCTION_URL` to the full origin you open in your browser.
+It defaults to `http://localhost:3000`. For a public instance, use your own
+HTTPS origin and forward traffic to the app's localhost port with your
+reverse proxy. Preserve the incoming host and forward the original HTTPS
+scheme. If your buyer-facing order origin differs, set `SALES_PUBLIC_URL`.
 
 ```sh
-docker compose up --build
+docker compose up --build -d
 ```
 
-Open [Custa](http://localhost:3000). Compose starts Postgres 17 on Alpine
+Compose starts Postgres 17 on Alpine
 with a persistent volume, applies the Drizzle schema, and starts the
 Next.js app and local sales MCP server. Ports are bound to localhost.
 Compose supplies the container database and MCP addresses automatically.
+
+Create the first owner before signing in. Supply a password of 12 to 128
+characters. In PowerShell 7, run:
+
+```powershell
+Read-Host "Owner password" -MaskInput | docker compose exec -T app pnpm --filter @acme/nextjs owner:password owner@example.com "Owner"
+```
+
+In Bash, run:
+
+```bash
+read -rsp 'Owner password: ' owner_password
+printf '%s\n' "$owner_password" | docker compose exec -T app pnpm --filter @acme/nextjs owner:password owner@example.com "Owner"
+unset owner_password
+```
+
+Open Custa at `PROJECT_PRODUCTION_URL` and sign in. Account provisioning
+requires access to the instance and public sign-up is disabled. To migrate
+an existing account, run the same command with its original email. Custa
+preserves its user ID and workspace, sets the local password, and revokes
+active sessions. Use the command again to reset a password.
 
 The local MCP returns sample pitches and fictional prospects. Outreach
 and email are simulated, with duplicate requests suppressed until the MCP
@@ -32,17 +56,19 @@ for local testing.
 To start just Postgres and MCP while running Next.js on the host, use
 `docker compose up --build postgres sales-mcp`. In `.env`, use the example
 `POSTGRES_URL` and set `SALES_MCP_URL=http://localhost:8080/mcp`,
-`SALES_MCP_TOKEN=custa-local-mcp`, and `SALES_PUBLIC_URL=http://localhost:3000`.
+`SALES_MCP_TOKEN=custa-local-mcp`.
 Then apply the schema and start Next.js using the commands below.
 
 ### Run Next.js on the host
 
 1. Use the Node and pnpm versions in the root package manifest and run `pnpm install`.
-2. Copy `.env.example` to `.env` and supply your Postgres URL, a generated
-   `AUTH_SECRET`, and Discord credentials. Configure the Discord callback for
-   the Next.js host (`http://localhost:3000/api/auth/callback/discord` locally).
+2. Copy `.env.example` to `.env` and set `POSTGRES_URL`, `AUTH_SECRET`, and
+   `PROJECT_PRODUCTION_URL`. Set `POSTGRES_DIRECT_URL` for schema management
+   if your runtime URL connects through a pooler.
 3. Run `pnpm db:push` against your development database.
-4. Run `pnpm dev:next` and open the URL printed by Next.js.
+4. Provision an owner using the command above without the
+   `docker compose exec -T app` prefix.
+5. Run `pnpm dev:next` and open the URL printed by Next.js.
 
 Each signed-in owner has one business profile. Save the business details,
 generate a pitch, and search LinkedIn. Review and edit each outreach message
@@ -52,14 +78,16 @@ stores the request before attempting email notification and lets the owner
 retry a pending notification from the workspace. Requests are recorded for
 business fulfillment.
 
-## Sales MCP provider
+## Bring your own sales MCP instance
 
 Configure `SALES_MCP_URL` as the trusted provider's Streamable HTTP endpoint,
 `SALES_MCP_TOKEN` as its service bearer token, and `SALES_PUBLIC_URL` as the
-customer-reachable origin of the deployed Next.js app. Use HTTPS for deployed
-endpoints. The profile and workspace can be used before the provider is set up.
+customer-reachable origin of the deployed Next.js app when it differs from
+`PROJECT_PRODUCTION_URL`. Use HTTPS for public endpoints. Compose uses its
+bundled local MCP by default. The app also accepts a compatible MCP server
+you operate when you run the app outside the bundled Compose setup.
 
-The provider is an external service that must expose these tools using the
+The MCP server must expose these tools using the
 2025-11-25 MCP handshake or a supported earlier Streamable HTTP version.
 Return each output as MCP `structuredContent` or as JSON in the first text
 content item. The `business` argument contains `name`, `offering`, `audience`,
@@ -144,7 +172,7 @@ packages
   ├─ auth
   │   └─ Authentication using better-auth.
   ├─ db
-  │   └─ Typesafe db calls using Drizzle & Supabase
+  │   └─ Typesafe db calls using Drizzle and Postgres
   └─ ui
       └─ Start of a UI package for the webapp using shadcn-ui
 tooling
@@ -236,19 +264,12 @@ For more information about the Better Auth CLI, see the [official documentation]
 
 3. Run `pnpm dev` at the project root folder.
 
-### 4. Configuring Better-Auth to work with Expo
+### 4. Connect Expo to Custa
 
-In order to get Better-Auth to work with Expo, you must either:
-
-#### Deploy the Auth Proxy (RECOMMENDED)
-
-Better-auth comes with an [auth proxy plugin](https://www.better-auth.com/docs/plugins/oauth-proxy). By deploying the Next.js app, you can get OAuth working in preview deployments and development for Expo apps.
-
-By using the proxy plugin, the Next.js apps will forward any auth requests to the proxy server, which will handle the OAuth flow and then redirect back to the Next.js app. This makes it easy to get OAuth working since you'll have a stable URL that is publicly accessible and doesn't change for every deployment and doesn't rely on what port the app is running on. So if port 3000 is taken and your Next.js app starts at port 3001 instead, your auth should still work without having to reconfigure the OAuth provider.
-
-#### Add your local IP to your OAuth provider
-
-You can alternatively add your local IP (e.g. `192.168.x.y:$PORT`) to your OAuth provider. This may not be as reliable as your local IP may change when you change networks. Some OAuth providers may also only support a single callback URL for each app making this approach unviable for some providers (e.g. GitHub).
+Set `EXPO_PUBLIC_PROJECT_PRODUCTION_URL` to a Custa origin that the device
+can reach. Create an owner on that instance and use the same email and
+password in Expo. For local TanStack Start, set `PROJECT_PRODUCTION_URL`
+to its origin, such as `http://localhost:3001`.
 
 ### 5a. When it's time to add a new UI component
 
@@ -284,32 +305,14 @@ If you need to share runtime code between the client and server, such as input v
 
 ### Next.js
 
-#### Prerequisites
-
-> **Note**
-> Please note that the Next.js application with tRPC must be deployed in order for the Expo app to communicate with the server in a production environment.
-
-#### Deploy to Vercel
-
-Let's deploy the Next.js application to [Vercel](https://vercel.com). If you've never deployed a Turborepo app there, don't worry, the steps are quite straightforward. You can also read the [official Turborepo guide](https://vercel.com/docs/concepts/monorepos/turborepo) on deploying to Vercel.
-
-1. Create a new project on Vercel, select the `apps/nextjs` folder as the root directory. Vercel's zero-config system should handle all configurations for you.
-
-2. Add your `POSTGRES_URL` environment variable.
-
-3. Done! Your app should successfully deploy. Assign your domain and use that instead of `localhost` for the `url` in the Expo app so that your Expo app can communicate with your backend when you are not in development.
-
-### Auth Proxy
-
-The auth proxy comes as a better-auth plugin. This is required for the Next.js app to be able to authenticate users in preview deployments. The auth proxy is not used for OAuth request in production deployments. The easiest way to get it running is to deploy the Next.js app to vercel.
+Use the Docker Compose setup above on the host you manage. Set
+`PROJECT_PRODUCTION_URL` to your instance's browser-facing origin.
 
 ### Expo
 
 Deploying your Expo application works slightly differently compared to Next.js on the web. Instead of "deploying" your app online, you need to submit production builds of your app to app stores, like [Apple App Store](https://www.apple.com/app-store) and [Google Play](https://play.google.com/store/apps). You can read the full [guide to distributing your app](https://docs.expo.dev/distribution/introduction), including best practices, in the Expo docs.
 
-1. Make sure to modify the `getBaseUrl` function to point to your backend's production URL:
-
-   <https://github.com/t3-oss/create-t3-turbo/blob/656965aff7db271e5e080242c4a3ce4dad5d25f8/apps/expo/src/utils/api.tsx#L20-L37>
+1. Set `EXPO_PUBLIC_PROJECT_PRODUCTION_URL` to your Custa instance's origin.
 
 2. Let's start by setting up [EAS Build](https://docs.expo.dev/build/introduction), which is short for Expo Application Services. The build service helps you create builds of your app, without requiring a full native development setup. The commands below are a summary of [Creating your first build](https://docs.expo.dev/build/setup).
 

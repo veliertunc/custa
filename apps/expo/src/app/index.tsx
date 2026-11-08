@@ -100,24 +100,67 @@ function CreatePost() {
 
 function MobileAuth() {
   const { data: session } = authClient.useSession();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+
+  if (!session) {
+    return (
+      <View className="gap-2">
+        <TextInput
+          accessibilityLabel="Email"
+          autoCapitalize="none"
+          autoComplete="email"
+          className="border-input text-foreground rounded-sm border p-2"
+          keyboardType="email-address"
+          onChangeText={setEmail}
+          placeholder="Email"
+          value={email}
+        />
+        <TextInput
+          accessibilityLabel="Password"
+          autoComplete="current-password"
+          className="border-input text-foreground rounded-sm border p-2"
+          onChangeText={setPassword}
+          placeholder="Password"
+          secureTextEntry
+          value={password}
+        />
+        {error && <Text className="text-destructive">{error}</Text>}
+        <Pressable
+          className="bg-primary items-center rounded-sm p-2"
+          disabled={pending}
+          onPress={async () => {
+            setPending(true);
+            setError("");
+            try {
+              const result = await authClient.signIn.email({ email, password });
+              if (result.error) setError("Check your email and password.");
+              else setPassword("");
+            } catch {
+              setError("Sign-in failed. Please try again.");
+            } finally {
+              setPending(false);
+            }
+          }}
+        >
+          <Text>{pending ? "Signing in…" : "Sign in"}</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <>
       <Text className="text-foreground pb-2 text-center text-xl font-semibold">
-        {session?.user.name ? `Hello, ${session.user.name}` : "Not logged in"}
+        Hello, {session.user.name}
       </Text>
       <Pressable
-        onPress={() =>
-          session
-            ? authClient.signOut()
-            : authClient.signIn.social({
-                provider: "discord",
-                callbackURL: "/",
-              })
-        }
+        onPress={() => authClient.signOut()}
         className="bg-primary flex items-center rounded-sm p-2"
       >
-        <Text>{session ? "Sign Out" : "Sign In With Discord"}</Text>
+        <Text>Sign out</Text>
       </Pressable>
     </>
   );

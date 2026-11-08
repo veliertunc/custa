@@ -195,9 +195,14 @@ export const salesRouter = createTRPCRouter({
       });
       if (!lead) throw new TRPCError({ code: "NOT_FOUND" });
       if (lead.sentAt) return;
+      const salesPublicUrl = process.env.SALES_PUBLIC_URL?.trim();
       const origin = z
         .url({ protocol: /^https?$/ })
-        .safeParse(process.env.SALES_PUBLIC_URL);
+        .safeParse(
+          salesPublicUrl?.length
+            ? salesPublicUrl
+            : process.env.PROJECT_PRODUCTION_URL,
+        );
       if (!origin.success) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",

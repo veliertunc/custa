@@ -53,11 +53,10 @@ services:
     environment:
       POSTGRES_URL: postgres://custa:custa-local@postgres:5432/custa
       AUTH_SECRET: ${AUTH_SECRET:-}
-      AUTH_DISCORD_ID: ${AUTH_DISCORD_ID:-}
-      AUTH_DISCORD_SECRET: ${AUTH_DISCORD_SECRET:-}
+      PROJECT_PRODUCTION_URL: ${PROJECT_PRODUCTION_URL:-http://localhost:3000}
       SALES_MCP_URL: http://sales-mcp:8080/mcp
       SALES_MCP_TOKEN: ${SALES_MCP_TOKEN:-custa-local-mcp}
-      SALES_PUBLIC_URL: ${SALES_PUBLIC_URL:-http://localhost:3000}
+      SALES_PUBLIC_URL: ${SALES_PUBLIC_URL:-}
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:

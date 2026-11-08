@@ -31,8 +31,8 @@ export async function salesTool<T>(
     Accept: "application/json, text/event-stream",
   });
   const signal = AbortSignal.timeout(25_000);
-  async function post(method: string, params?: object, id?: number) {
-    const response = await fetch(url!, {
+  const post = async (method: string, params?: object, id?: number) => {
+    const response = await fetch(url, {
       method: "POST",
       headers,
       body: JSON.stringify({ jsonrpc: "2.0", id, method, params }),
@@ -41,7 +41,7 @@ export async function salesTool<T>(
     });
     if (!response.ok) throw new Error("MCP HTTP error");
     return response;
-  }
+  };
 
   async function result(response: Response, id: number) {
     const check = (value: unknown) => {
