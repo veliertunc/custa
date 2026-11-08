@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: custa
+      POSTGRES_PASSWORD: custa-local
+      POSTGRES_DB: custa
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "custa", "-d", "custa"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  sales-mcp:
+    build:
+      context: .
+      dockerfile: services/sales-mcp/Dockerfile
+    init: true
+    environment:
+      SALES_MCP_TOKEN: ${SALES_MCP_TOKEN:-custa-local-mcp}
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test:
+        ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  schema:
+    image: custa-app:local
+    build:
+      context: .
+      dockerfile: apps/nextjs/Dockerfile
+    environment:
+      POSTGRES_URL: postgres://custa:custa-local@postgres:5432/custa
+    command: ["pnpm", "--filter", "@acme/db", "exec", "drizzle-kit", "push"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    image: custa-app:local
+    build:
+      context: .
+      dockerfile: apps/nextjs/Dockerfile
+    init: true
+    environment:
+      POSTGRES_URL: postgres://custa:custa-local@postgres:5432/custa
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      AUTH_DISCORD_ID: ${AUTH_DISCORD_ID:-}
+      AUTH_DISCORD_SECRET: ${AUTH_DISCORD_SECRET:-}
+      SALES_MCP_URL: http://sales-mcp:8080/mcp
+      SALES_MCP_TOKEN: ${SALES_MCP_TOKEN:-custa-local-mcp}
+      SALES_PUBLIC_URL: ${SALES_PUBLIC_URL:-http://localhost:3000}
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      schema:
+        condition: service_completed_successfully
+      sales-mcp:
+        condition: service_healthy
+
+volumes:
+  postgres-data:

@@ -1,10 +1,10 @@
-import { sql } from "@vercel/postgres";
-import { drizzle } from "drizzle-orm/vercel-postgres";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
 
 import * as schema from "./schema";
 
 export const db = drizzle({
-  client: sql,
+  client: new pg.Pool({ connectionString: process.env.POSTGRES_URL }),
   schema,
   casing: "snake_case",
 });

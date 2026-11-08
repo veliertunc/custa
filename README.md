@@ -8,10 +8,39 @@ The existing TanStack Start and Expo apps are also part of the workspace.
 
 ## Run Custa
 
+### With Docker Compose
+
+Copy `.env.example` to `.env`, set a generated `AUTH_SECRET` and your
+Discord OAuth credentials, and register
+`http://localhost:3000/api/auth/callback/discord` as the Discord callback.
+
+```sh
+docker compose up --build
+```
+
+Open [Custa](http://localhost:3000). Compose starts Postgres 17 on Alpine
+with a persistent volume, applies the Drizzle schema, and starts the
+Next.js app and local sales MCP server. Ports are bound to localhost.
+Compose supplies the container database and MCP addresses automatically.
+
+The local MCP returns sample pitches and fictional prospects. Outreach
+and email are simulated, with duplicate requests suppressed until the MCP
+server restarts. Use `docker compose logs sales-mcp` to find the test order
+link after simulating outreach. Keep the default local credentials and token
+for local testing.
+
+To start just Postgres and MCP while running Next.js on the host, use
+`docker compose up --build postgres sales-mcp`. In `.env`, use the example
+`POSTGRES_URL` and set `SALES_MCP_URL=http://localhost:8080/mcp`,
+`SALES_MCP_TOKEN=custa-local-mcp`, and `SALES_PUBLIC_URL=http://localhost:3000`.
+Then apply the schema and start Next.js using the commands below.
+
+### Run Next.js on the host
+
 1. Use the Node and pnpm versions in the root package manifest and run `pnpm install`.
-2. Copy `.env.example` to `.env` and supply your Postgres URL and Better Auth
-   Discord credentials. Configure the Discord callback for the Next.js host
-   (`http://localhost:3000/api/auth/callback/discord` for local development).
+2. Copy `.env.example` to `.env` and supply your Postgres URL, a generated
+   `AUTH_SECRET`, and Discord credentials. Configure the Discord callback for
+   the Next.js host (`http://localhost:3000/api/auth/callback/discord` locally).
 3. Run `pnpm db:push` against your development database.
 4. Run `pnpm dev:next` and open the URL printed by Next.js.
 
@@ -134,7 +163,8 @@ tooling
 ## Quick Start
 
 > **Note**
-> The [db](./packages/db) package is preconfigured to use Supabase and is **edge-bound** with the [Vercel Postgres](https://github.com/vercel/storage/tree/main/packages/postgres) driver. If you're using something else, make the necessary modifications to the [schema](./packages/db/src/schema.ts) as well as the [client](./packages/db/src/index.ts) and the [drizzle config](./packages/db/drizzle.config.ts). If you want to switch to non-edge database driver, remove `export const runtime = "edge";` [from all pages and api routes](https://github.com/t3-oss/create-t3-turbo/issues/634#issuecomment-1730240214).
+> The [db](./packages/db) package uses node-postgres in the Node.js runtime.
+> It accepts a connection string for either local Postgres or a hosted Postgres provider.
 
 To get it running, follow the steps below:
 

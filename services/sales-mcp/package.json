@@ -1,0 +1,12 @@
+{
+  "name": "@custa/sales-mcp",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "catalog:"
+  }
+}

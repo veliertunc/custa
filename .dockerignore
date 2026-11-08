@@ -1,0 +1,14 @@
+.git
+.github
+.vscode
+**/.env*
+**/*.pem
+**/node_modules
+**/.next
+**/.turbo
+**/.cache
+**/dist
+**/.output
+**/.nitro
+**/.expo
+**/.vercel
