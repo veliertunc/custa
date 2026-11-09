@@ -30,7 +30,9 @@ export async function salesTool<T>(
     "Content-Type": "application/json",
     Accept: "application/json, text/event-stream",
   });
-  const signal = AbortSignal.timeout(25_000);
+  const generatesText =
+    name === "create_sales_pitch" || name === "research_linkedin_market";
+  const signal = AbortSignal.timeout(generatesText ? 90_000 : 25_000);
   const post = async (method: string, params?: object, id?: number) => {
     const response = await fetch(url, {
       method: "POST",

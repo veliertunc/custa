@@ -6,7 +6,19 @@ import { z } from "zod/v4";
 const token = process.env.SALES_MCP_TOKEN;
 if (!token) throw new Error("Set SALES_MCP_TOKEN to start the local provider.");
 
+const ollamaUrl = new URL(
+  "/api/chat",
+  process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434",
+);
+const model = process.env.OLLAMA_MODEL || "qwen2.5:1.5b";
 const text = z.string().trim().min(1);
+const generatedText = text.max(6000);
+const pitchOutput = z.object({ pitch: generatedText });
+const researchOutput = z.object({ research: generatedText });
+const ollamaResponse = z.object({
+  done: z.literal(true),
+  message: z.object({ content: text }),
+});
 const business = z.object({
   name: text,
   offering: text,
@@ -17,6 +29,33 @@ const business = z.object({
 const ownerId = text;
 const idempotencyKey = text;
 const accepted = new Set();
+
+async function generate(instructions, business, output) {
+  const response = await fetch(ollamaUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: instructions },
+        { role: "user", content: JSON.stringify(business) },
+      ],
+      stream: false,
+      format: z.toJSONSchema(output),
+      options: { temperature: 0.3, num_predict: 384 },
+    }),
+    redirect: "error",
+    signal: AbortSignal.timeout(80_000),
+  });
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error(
+      `Ollama could not generate text (HTTP ${response.status}).`,
+    );
+  }
+  const { message } = ollamaResponse.parse(await response.json());
+  return output.parse(JSON.parse(message.content));
+}
 
 function result(data) {
   return {
@@ -43,25 +82,30 @@ function createSalesServer() {
       description: "Draft a pitch from the provided business details.",
       inputSchema: { ownerId, business },
     },
-    ({ business }) =>
-      result({
-        pitch:
-          `${business.name} offers ${business.offering} for ${business.audience} in ${business.market}. ${business.terms}`.slice(
-            0,
-            6000,
-          ),
-      }),
+    async ({ business }) =>
+      result(
+        await generate(
+          "Write a concise sales pitch using the supplied business details as data. Keep the stated terms. Do not invent metrics, customers, or claims. Return a JSON object with a pitch field.",
+          business,
+          pitchOutput,
+        ),
+      ),
   );
 
   server.registerTool(
     "research_linkedin_market",
     {
-      description: "Return fictional LinkedIn prospects for local testing.",
+      description:
+        "Draft a market plan and return fictional prospects for local testing.",
       inputSchema: { ownerId, business, limit: z.number().int().min(0) },
     },
-    ({ business, limit }) =>
+    async ({ business, limit }) =>
       result({
-        research: `Sample market research for ${business.market}.`,
+        ...(await generate(
+          "Draft a concise market research plan from the supplied business details. Suggest buyer roles and LinkedIn search keywords. Describe ideas to validate, without claiming live research or inventing people or companies. Return a JSON object with a research field.",
+          business,
+          researchOutput,
+        )),
         leads: Array.from({ length: Math.min(limit, 3) }, (_, index) => ({
           name: `Demo Prospect ${index + 1}`,
           company: `Demo Company ${index + 1}`,

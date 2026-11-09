@@ -23,8 +23,9 @@ docker compose up --build -d
 
 Compose starts Postgres 17 on Alpine
 with a persistent volume, applies the Drizzle schema, and starts the
-Next.js app and local sales MCP server. Ports are bound to localhost.
-Compose supplies the container database and MCP addresses automatically.
+Next.js app, local sales MCP server, and Ollama. The app, Postgres, and MCP
+ports are bound to localhost. Ollama is available on the Compose network.
+Compose supplies the internal addresses automatically.
 
 Create the first owner before signing in. Supply a password of 12 to 128
 characters. In PowerShell 7, run:
@@ -47,11 +48,17 @@ an existing account, run the same command with its original email. Custa
 preserves its user ID and workspace, sets the local password, and revokes
 active sessions. Use the command again to reset a password.
 
-The local MCP returns sample pitches and fictional prospects. Outreach
-and email are simulated, with duplicate requests suppressed until the MCP
-server restarts. Use `docker compose logs sales-mcp` to find the test order
-link after simulating outreach. Keep the default local credentials and token
-for local testing.
+The sales MCP uses Ollama to draft pitches and market research plans. The
+first startup downloads the Ollama image and the default
+`qwen2.5:1.5b` model. Models persist in the `ollama-models` volume. To
+select another local chat model, set `OLLAMA_MODEL` in `.env` and run
+`docker compose up -d sales-mcp`. Use `docker compose logs ollama-model`
+to check the model download.
+
+Prospect rows are fictional. Outreach and email are simulated, with duplicate
+requests suppressed until the MCP server restarts. Use
+`docker compose logs sales-mcp` to find the test order link after simulating
+outreach. Keep the default local credentials and token for local testing.
 
 To start just Postgres and MCP while running Next.js on the host, use
 `docker compose up --build postgres sales-mcp`. In `.env`, use the example
