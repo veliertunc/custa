@@ -1,7 +1,7 @@
-FROM node:22.21.0-alpine
+FROM node:26.12.0-alpine
 
 WORKDIR /workspace
-RUN npm install --global pnpm@10.19.0
+RUN npm install --global pnpm@12.18.0
 
 COPY . .
 RUN --mount=type=cache,id=custa-pnpm,target=/pnpm/store \
