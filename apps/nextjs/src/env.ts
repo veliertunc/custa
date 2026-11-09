@@ -16,6 +16,12 @@ export const env = createEnv({
    */
   server: {
     POSTGRES_URL: z.url(),
+    AUTH_GOOGLE_CLIENT_ID: z.string().trim().min(1).optional(),
+    AUTH_GOOGLE_CLIENT_SECRET: z.string().trim().min(1).optional(),
+    AUTH_APPLE_CLIENT_ID: z.string().trim().min(1).optional(),
+    AUTH_APPLE_CLIENT_SECRET: z.string().trim().min(1).optional(),
+    AUTH_LINKEDIN_CLIENT_ID: z.string().trim().min(1).optional(),
+    AUTH_LINKEDIN_CLIENT_SECRET: z.string().trim().min(1).optional(),
   },
 
   /**
@@ -35,4 +41,5 @@ export const env = createEnv({
   },
   skipValidation:
     !!process.env.CI || process.env.npm_lifecycle_event === "lint",
+  emptyStringAsUndefined: true,
 });

@@ -78,6 +78,29 @@ stores the request before attempting email notification and lets the owner
 retry a pending notification from the workspace. Requests are recorded for
 business fulfillment.
 
+## Optional social sign-in
+
+Set the client ID and secret for each provider you want to enable in `.env`.
+Register the callback below on the provider's developer portal, using your
+exact `PROJECT_PRODUCTION_URL` as the origin. Restart the app after editing
+`.env`. With Compose, run `docker compose up -d app` to apply the environment.
+The sign-in page shows providers with a complete credential pair.
+
+| Provider | Environment variables | Callback path |
+| --- | --- | --- |
+| [Google](https://better-auth.com/docs/authentication/google) | `AUTH_GOOGLE_CLIENT_ID`, `AUTH_GOOGLE_CLIENT_SECRET` | `/api/auth/callback/google` |
+| [Apple](https://developer.apple.com/help/account/capabilities/configure-sign-in-with-apple-for-the-web) | `AUTH_APPLE_CLIENT_ID`, `AUTH_APPLE_CLIENT_SECRET` | `/api/auth/callback/apple` |
+| [LinkedIn](https://learn.microsoft.com/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2) | `AUTH_LINKEDIN_CLIENT_ID`, `AUTH_LINKEDIN_CLIENT_SECRET` | `/api/auth/callback/linkedin` |
+
+Apple requires a registered HTTPS domain. Use the Services ID and a signed
+client-secret JWT. Renew the JWT before it expires. For LinkedIn, enable
+the **Sign In with LinkedIn using OpenID Connect** product.
+
+An instance operator still provisions each owner. To connect a provider
+on first sign-in, use a provider account that verifies the same email
+address as the existing Custa owner account.
+For Apple, share that email if prompted. Password sign-in remains available.
+
 ## Bring your own sales MCP instance
 
 Configure `SALES_MCP_URL` as the trusted provider's Streamable HTTP endpoint,

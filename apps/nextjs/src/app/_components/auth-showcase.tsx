@@ -3,13 +3,13 @@ import { redirect } from "next/navigation";
 
 import { Button } from "@acme/ui/button";
 
-import { auth, getSession } from "~/auth/server";
+import { auth, getSession, signInProviders } from "~/auth/server";
 import { OwnerSignIn } from "./owner-sign-in";
 
 export async function AuthShowcase() {
   const session = await getSession();
 
-  if (!session) return <OwnerSignIn />;
+  if (!session) return <OwnerSignIn providers={signInProviders} />;
 
   return (
     <div className="flex items-center gap-3">
